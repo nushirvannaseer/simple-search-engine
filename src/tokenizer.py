@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize
 from collections import Counter
+from ordered_set import OrderedSet
 
 #constants
 STOP_WORDS = [ word.strip() for word in open('stoplist.txt', 'r').readlines()]
@@ -14,6 +15,8 @@ FILTER_REGEX = re.compile('^[0-9A-Za-z](|[-0-9A-Za-z]{0,61}[0-9A-Za-z])$')
 
 #globals
 forward_index={}
+total_tokens = OrderedSet()
+token_ids = {}
 
 #functions
 def remove_tags(soup):  
@@ -55,22 +58,33 @@ def tokenize_html_doc(file):
     stripped = remove_stop_words(stripped)
     stripped = apply_stemming(stripped)
     
+    #adding new tokens to existing tokens_list
+    global total_tokens, token_ids
+    total_tokens = total_tokens.union(OrderedSet(stripped))
+    
+    #create a dictionary with all tokens and their assigned ids
+    token_ids = { term: i for i, term in enumerate(total_tokens)}
+    
     return stripped
 
-def write_termids_to_file(termids, file):
+def write_termids_to_file(file):
     writable = ''
-    for index, term in enumerate(termids):
-        writable += f'{index}\t{term}\n'
+    for key, value in token_ids.items():
+        writable += f'{value}\t{key}\n'
     file.write(writable)
-
+    
+def write_doc_indices_to_file(file):
+    writable = ''
+    for docid, term_list in forward_index.items():
+        for t, freq in term_list:
+            writable += f'{docid}\t{t}\t{freq}\n'
+    file.write(writable)
 
 #main
 if __name__ == '__main__':
     try:
         # directory = input("Enter the directory for the html files: ")
-        directory = 'corpus'
-        print(STOP_WORDS)
-        
+        directory = 'corpus'        
         
         if os.path.exists(directory):
             list_of_files = os.listdir(directory)
@@ -80,32 +94,41 @@ if __name__ == '__main__':
             termids_file = open('termids.txt', 'w+')
             doc_index_file = open('doc_index.txt', 'w+')
             
+            #variable that stares docid-docname pairs as a long string
             docids = ''
-            termids = set()
+            
             #iterate over all the files in the directory
             for index, filename in enumerate(list_of_files):
-                # print(f'FILENAME: {filename}\n\n\n')
+
                 tokenized = None
                 
                 with open(os.path.join(directory, filename), 'rb') as f:
+                    #gets the tokens in the document
                     tokenized = tokenize_html_doc(f)
                 docids += f'{str(index)}\t{filename}\n'
                 
+                tokenized = sorted(tokenized)
+                #create frequency dictionary corresponding to docid
                 forward_index[index] = Counter(tokenized)
-
-                termids = termids.union(set(tokenized))
+                
+                termids = OrderedSet([token_ids[word] for word in tokenized])
+                
+                
+                forward_index[index] = dict(zip(termids, list(forward_index[index].values())))
+                forward_index[index] = sorted(forward_index[index].items(), key = lambda kv: kv[0] )
+            
+                
                 if index%500==0:
                     print(f'index: {index}')
-                if index == 200:
-                    break
             
             
             docids_file.write(docids)
-            write_termids_to_file(termids, termids_file)
+            write_termids_to_file(termids_file)
+            write_doc_indices_to_file(doc_index_file)
             docids_file.close()
             termids_file.close()
             
         else:
-            pass
+            print("Directory does not exist!")
     except Exception as e:
         print(e)
