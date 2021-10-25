@@ -6,10 +6,14 @@ import re
 from bs4 import BeautifulSoup
 from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize
+from collections import Counter
 
 #constants
 STOP_WORDS = [ word.strip() for word in open('stoplist.txt', 'r').readlines()]
 FILTER_REGEX = re.compile('^[0-9A-Za-z](|[-0-9A-Za-z]{0,61}[0-9A-Za-z])$')
+
+#globals
+forward_index={}
 
 #functions
 def remove_tags(soup):  
@@ -50,6 +54,7 @@ def tokenize_html_doc(file):
     #get a list of words without stopwords
     stripped = remove_stop_words(stripped)
     stripped = apply_stemming(stripped)
+    
     return stripped
 
 def write_termids_to_file(termids, file):
@@ -81,15 +86,19 @@ if __name__ == '__main__':
             for index, filename in enumerate(list_of_files):
                 # print(f'FILENAME: {filename}\n\n\n')
                 tokenized = None
+                
                 with open(os.path.join(directory, filename), 'rb') as f:
                     tokenized = tokenize_html_doc(f)
                 docids += f'{str(index)}\t{filename}\n'
                 
+                forward_index[index] = Counter(tokenized)
+
                 termids = termids.union(set(tokenized))
                 if index%500==0:
                     print(f'index: {index}')
                 if index == 200:
                     break
+            
             
             docids_file.write(docids)
             write_termids_to_file(termids, termids_file)
