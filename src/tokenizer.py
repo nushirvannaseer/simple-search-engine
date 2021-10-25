@@ -127,6 +127,7 @@ if __name__ == '__main__':
             write_doc_indices_to_file(doc_index_file)
             docids_file.close()
             termids_file.close()
+            doc_index_file.close()
             
         else:
             print("Directory does not exist!")
