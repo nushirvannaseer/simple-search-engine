@@ -1,12 +1,15 @@
 #library imports
 import os
+import re
 
 #module imports
 from bs4 import BeautifulSoup
 from nltk.stem import PorterStemmer
 from nltk.tokenize import word_tokenize
+
 #constants
 STOP_WORDS = [ word.strip() for word in open('stoplist.txt', 'r').readlines()]
+FILTER_REGEX = re.compile('^[0-9A-Za-z](|[-0-9A-Za-z]{0,61}[0-9A-Za-z])$')
 
 #functions
 def remove_tags(soup):  
@@ -25,7 +28,8 @@ def apply_stemming(word_list):
     ps = PorterStemmer()
     stemmed_words = []
     for w in word_list:
-        stemmed_words.append(ps.stem(w))
+        if FILTER_REGEX.match(w):
+            stemmed_words.append(ps.stem(w))
     return stemmed_words
 
 def tokenize_html_doc(file):
