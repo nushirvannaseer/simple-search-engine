@@ -1,16 +1,21 @@
 #library imports
 import os
 import re
+import sys
 
 #module imports
 from bs4 import BeautifulSoup
 from nltk.stem import PorterStemmer
-from nltk.tokenize import word_tokenize
 from collections import Counter
 from ordered_set import OrderedSet
 
 #constants
-STOP_WORDS = [ word.strip() for word in open('stoplist.txt', 'r').readlines()]
+try:
+    STOP_WORDS = [ word.strip() for word in open('../stoplist.txt', 'r').readlines()]
+except Exception as e:
+    print(e)
+    exit()
+    
 FILTER_REGEX = re.compile('^[0-9A-Za-z](|[-0-9A-Za-z]{0,61}[0-9A-Za-z])$')
 
 #globals
@@ -83,16 +88,15 @@ def write_doc_indices_to_file(file):
 #main
 if __name__ == '__main__':
     try:
-        # directory = input("Enter the directory for the html files: ")
-        directory = 'corpus'        
+        directory = sys.argv[1] if len(sys.argv) > 1 else input("No directory provided on the command line. Please enter a directory here to proceed: ")
         
         if os.path.exists(directory):
             list_of_files = os.listdir(directory)
             print(f'Total files in directory: {len(list_of_files)}')
             
-            docids_file = open('docids.txt', 'w+')
-            termids_file = open('termids.txt', 'w+')
-            doc_index_file = open('doc_index.txt', 'w+')
+            docids_file = open('../docids.txt', 'w+')
+            termids_file = open('../termids.txt', 'w+')
+            doc_index_file = open('../doc_index.txt', 'w+')
             
             #variable that stares docid-docname pairs as a long string
             docids = ''
@@ -118,8 +122,8 @@ if __name__ == '__main__':
                 forward_index[index] = sorted(forward_index[index].items(), key = lambda kv: kv[0] )
             
                 
-                if index%500==0:
-                    print(f'index: {index}')
+                if index>0 and index%500==0:
+                    print(f'Processed {index+1} files...')
             
             
             docids_file.write(docids)
@@ -128,6 +132,7 @@ if __name__ == '__main__':
             docids_file.close()
             termids_file.close()
             doc_index_file.close()
+            print("Success!")
             
         else:
             print("Directory does not exist!")
